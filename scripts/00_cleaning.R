@@ -28,6 +28,10 @@ values_df <- raw_values_df |>
   select(-`VBQ-Y`, -`VBQ-N`, -`Q-SIB-N`,
          -`Q-TBQ-Y`, -`Q-TBQ-N`, -`Q-OP-2`,
          -ends_with("TEXT")) |> 
+  # remove questions that weakly predict outcomes
+  select(-`Q-DC-1-1`, -`Q-DC-1-2`, -`Q-DC-2`, 
+         -`Q-DC-3`, -`Q-IC-1`, -`Q-IC-3`, -`Q-CE-1`, 
+         -`Q-CE-2-2`, -`Q-T-4`, -`Q-T-5-1`, -`Q-T-5-2`) |> 
   type_convert() |> 
   # have to flip this one because the text is wrong
   mutate(`Q-T-11-1` = case_match(`Q-T-11-1`,
@@ -40,22 +44,23 @@ values_df <- raw_values_df |>
   # this test basically fails everyone it comes in contact with, so we probably
   # need to change it. By the very fact that everybody put their names in right
   # I would assume that everyone answered in good faith.
-  mutate(
-    failed_on = case_when(
-      (`Q-T-5-1` > 3 & `Q-T-5-2` < 3) | (`Q-T-5-1` < 3 & `Q-T-5-2` > 3) ~ "Q-T-5",
-      (`Q-T-11-1` > 3 & `Q-T-11-2` < 3) | (`Q-T-11-1` < 3 & `Q-T-11-2` > 3) ~ "Q-T-11",
-      (`Q-V-2-1` > 3 & `Q-V-2-2` < 3) | (`Q-V-2-1` < 3 & `Q-V-2-2` > 3) ~ "Q-V-2",
-      (`Q-V-11-1` > 3 & `Q-V-11-2` < 3) | (`Q-V-11-1` < 3 & `Q-V-11-2` > 3) ~ "Q-V-11",
-      (`Q-SI-7-1` > 3 & `Q-SI-7-2` < 3) | (`Q-SI-7-1` < 3 & `Q-SI-7-2` > 3) ~ "Q-SI-7",
-      (`Q-PH-1-1` > 3 & `Q-PH-1-2` < 3) | (`Q-PH-1-1` < 3 & `Q-PH-1-2` > 3) ~ "Q-PH-1",
-      (`Q-PH-2-1` > 3 & `Q-PH-2-2` < 3) | (`Q-PH-2-1` < 3 & `Q-PH-2-2` > 3) ~ "Q-PH-2",
-      (`Q-P-1-1` > 3 & `Q-P-1-2` < 3) | (`Q-P-1-1` < 3 & `Q-P-1-2` > 3) ~ "Q-P-1",
-      (`Q-P-8-1` > 3 & `Q-P-8-2` < 3) | (`Q-P-8-1` < 3 & `Q-P-8-2` > 3) ~ "Q-P-8",
-      (`Q-DC-1-1` > 3 & `Q-DC-1-2` < 3) | (`Q-DC-1-1` < 3 & `Q-DC-1-2` > 3) ~ "Q-DC-1",
-      (`Q-CE-2-1` > 3 & `Q-CE-2-2` < 3) | (`Q-CE-2-1` < 3 & `Q-CE-2-2` > 3) ~ "Q-CE-2",
-      .default = NA
-    )
-  ) |> 
+  # mutate(
+  #   failed_on = case_when(
+  #     (`Q-T-5-1` > 3 & `Q-T-5-2` < 3) | (`Q-T-5-1` < 3 & `Q-T-5-2` > 3) ~ "Q-T-5",
+  #     (`Q-T-11-1` > 3 & `Q-T-11-2` < 3) | (`Q-T-11-1` < 3 & `Q-T-11-2` > 3) ~ "Q-T-11",
+  #     (`Q-V-2-1` > 3 & `Q-V-2-2` < 3) | (`Q-V-2-1` < 3 & `Q-V-2-2` > 3) ~ "Q-V-2",
+  #     (`Q-V-11-1` > 3 & `Q-V-11-2` < 3) | (`Q-V-11-1` < 3 & `Q-V-11-2` > 3) ~ "Q-V-11",
+  #     (`Q-SI-7-1` > 3 & `Q-SI-7-2` < 3) | (`Q-SI-7-1` < 3 & `Q-SI-7-2` > 3) ~ "Q-SI-7",
+  #     (`Q-PH-1-1` > 3 & `Q-PH-1-2` < 3) | (`Q-PH-1-1` < 3 & `Q-PH-1-2` > 3) ~ "Q-PH-1",
+  #     (`Q-PH-2-1` > 3 & `Q-PH-2-2` < 3) | (`Q-PH-2-1` < 3 & `Q-PH-2-2` > 3) ~ "Q-PH-2",
+  #     (`Q-P-1-1` > 3 & `Q-P-1-2` < 3) | (`Q-P-1-1` < 3 & `Q-P-1-2` > 3) ~ "Q-P-1",
+  #     (`Q-P-8-1` > 3 & `Q-P-8-2` < 3) | (`Q-P-8-1` < 3 & `Q-P-8-2` > 3) ~ "Q-P-8",
+  #     (`Q-DC-1-1` > 3 & `Q-DC-1-2` < 3) | (`Q-DC-1-1` < 3 & `Q-DC-1-2` > 3) ~ "Q-DC-1",
+  #     (`Q-CE-2-1` > 3 & `Q-CE-2-2` < 3) | (`Q-CE-2-1` < 3 & `Q-CE-2-2` > 3) ~ "Q-CE-2",
+  #     .default = NA
+  #   )
+  # ) |> 
+  
   # aggregate values
   mutate(
     t_avg = rowMeans(pick(starts_with("Q-T-")), na.rm = TRUE),
@@ -63,7 +68,19 @@ values_df <- raw_values_df |>
     si_avg = rowMeans(pick(starts_with("Q-SI-")), na.rm = TRUE),
     ph_avg = rowMeans(pick(starts_with("Q-PH-")), na.rm = TRUE),
     p_avg = rowMeans(pick(starts_with("Q-P-")), na.rm = TRUE),
-    dc_avg = rowMeans(pick(starts_with("Q-DC-")), na.rm = TRUE),
+    #dc_avg = rowMeans(pick(starts_with("Q-DC-")), na.rm = TRUE),
     ic_avg = rowMeans(pick(starts_with("Q-IC-")), na.rm = TRUE),
     ce_avg = rowMeans(pick(starts_with("Q-CE-")), na.rm = TRUE)
     )
+
+# 1. Identify the predictors based on the regex and outcomes based on the suffix
+predictors <- names(values_df) |> str_subset("^Q[0-9].*")
+outcomes   <- names(values_df) |> str_subset("_avg$")
+
+# 2. Map over the outcomes to create a named list of GLM models
+glms <- outcomes |> 
+  set_names() |> 
+  map(~ glm(reformulate(predictors, response = .x), data = values_df))
+
+# Access them like: glms$t_avg, glms$v_avg, etc.
+
